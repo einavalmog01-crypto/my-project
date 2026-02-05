@@ -480,9 +480,16 @@ async function runSelected() {
       })
     } else if (testId === "get-documents") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "DB Check: SOS Completion": test?.customTemplates?.["DB Check: SOS Completion"] || `-- Wait for SOS MESSAGE_STATUS = C
+        "1. SubmitOrder (GenerateContract + Fulfillment)": test?.customTemplates?.["1. SubmitOrder (GenerateContract + Fulfillment)"] || `<!-- STEP 1: SubmitOrder calls (GenerateContract then Fulfillment) -->
+<!-- OUTPUT: Extracts OGW_ORDER_ID from response for use in subsequent steps -->
+
+${defaultSubmitOrderGC}
+
+<!-- Then Fulfillment request follows with same structure -->`,
+        "2. DB Check: SOS Completion": test?.customTemplates?.["2. DB Check: SOS Completion"] || `-- STEP 2: Wait for SOS MESSAGE_STATUS = C
+-- INPUT: Uses OGW_ORDER_ID from Step 1
+-- Polls until all rows have MESSAGE_STATUS = 'C'
+
 SELECT 
     M.MESSAGE_STATUS,
     EXTRACTVALUE(XMLTYPE(M.MESSAGE_DATA), '//*[local-name()="OGWOrderLineId"]') AS OrderLineId,
@@ -493,15 +500,21 @@ ORDER BY TO_NUMBER(M.SUBSCRIBE_MESSAGE_ID);
 
 -- Expected: All rows should have MESSAGE_STATUS = 'C'
 -- Validates ErrorCodes are OGWERR-0000 or 60507`,
-        "DB Check: AUFTRAG_ID": test?.customTemplates?.["DB Check: AUFTRAG_ID"] || `-- Retrieve AUFTRAG_ID from OGW_SEND_DOCUMENT_TRANSACTIONS
+        "3. DB Check: AUFTRAG_ID": test?.customTemplates?.["3. DB Check: AUFTRAG_ID"] || `-- STEP 3: Retrieve AUFTRAG_ID from OGW_SEND_DOCUMENT_TRANSACTIONS
+-- INPUT: Uses OGW_ORDER_ID from Step 1
+-- OUTPUT: AUFTRAG_ID to be used in Steps 4 and 6
+
 SELECT AUFTRAG_ID 
 FROM OGW_SEND_DOCUMENT_TRANSACTIONS 
 WHERE OGW_ORDER_ID = '{{OGW_ORDER_ID}}'
 ORDER BY AUFTRAG_ID DESC;
 
 -- Takes the first (most recent) row
--- Must be a single numeric ID`,
-        "OMSendDocumentCallback": test?.customTemplates?.["OMSendDocumentCallback"] || `<?xml version="1.0" encoding="UTF-8"?>
+-- Stores AUFTRAG_ID for OMSendDocumentCallback and GetDocuments`,
+        "4. OMSendDocumentCallback": test?.customTemplates?.["4. OMSendDocumentCallback"] || `<!-- STEP 4: OMSendDocumentCallback -->
+<!-- INPUT: Uses OGW_ORDER_ID from Step 1 and AUFTRAG_ID from Step 3 -->
+
+<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:epsm="http://epsm.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
@@ -511,13 +524,19 @@ ORDER BY AUFTRAG_ID DESC;
     </epsm:sendDocumentResponse>
   </soapenv:Body>
 </soapenv:Envelope>`,
-        "DB Check: ACMS_Content": test?.customTemplates?.["DB Check: ACMS_Content"] || `-- Wait for ACMS_Content record
+        "5. DB Check: ACMS_Content": test?.customTemplates?.["5. DB Check: ACMS_Content"] || `-- STEP 5: Wait for ACMS_Content record
+-- INPUT: Uses OGW_ORDER_ID from Step 1
+-- Polls until record exists
+
 SELECT COUNT(1) 
 FROM ACMS_CONTENT 
 WHERE STR1 = '{{OGW_ORDER_ID}}';
 
 -- Expected: COUNT > 0`,
-        "GetDocuments": test?.customTemplates?.["GetDocuments"] || `<?xml version="1.0" encoding="UTF-8"?>
+        "6. GetDocuments": test?.customTemplates?.["6. GetDocuments"] || `<!-- STEP 6: GetDocuments -->
+<!-- INPUT: Uses ORDER_ID, AUFTRAG_ID from Step 3, LINE_OF_BUSINESS -->
+
+<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
