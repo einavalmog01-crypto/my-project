@@ -237,48 +237,33 @@ const filteredResources = resources.filter(r => {
       </div>
 
       {/* Add Resource */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Add Resource</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex gap-3">
-            <Card 
-              className="flex-1 cursor-pointer hover:bg-blue-500/10 border-blue-500/20 transition-colors"
-              onClick={() => openAddDialog("document")}
-            >
-              <CardContent className="p-3 flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-blue-500/20">
-                  <FileText className="h-4 w-4 text-blue-400" />
-                </div>
-                <span className="text-sm font-medium">Document</span>
-              </CardContent>
-            </Card>
-            <Card 
-              className="flex-1 cursor-pointer hover:bg-purple-500/10 border-purple-500/20 transition-colors"
-              onClick={() => openAddDialog("video")}
-            >
-              <CardContent className="p-3 flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-purple-500/20">
-                  <Video className="h-4 w-4 text-purple-400" />
-                </div>
-                <span className="text-sm font-medium">Video</span>
-              </CardContent>
-            </Card>
-            <Card 
-              className="flex-1 cursor-pointer hover:bg-green-500/10 border-green-500/20 transition-colors"
-              onClick={() => openAddDialog("link")}
-            >
-              <CardContent className="p-3 flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-green-500/20">
-                  <LinkIcon className="h-4 w-4 text-green-400" />
-                </div>
-                <span className="text-sm font-medium">Link</span>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">Add Resource:</span>
+        <Button 
+          size="sm"
+          onClick={() => openAddDialog("document")}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <FileText className="mr-1.5 h-4 w-4" />
+          Document
+        </Button>
+        <Button 
+          size="sm"
+          onClick={() => openAddDialog("video")}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          <Video className="mr-1.5 h-4 w-4" />
+          Video
+        </Button>
+        <Button 
+          size="sm"
+          onClick={() => openAddDialog("link")}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <LinkIcon className="mr-1.5 h-4 w-4" />
+          Link
+        </Button>
+      </div>
 
 {/* Search Card */}
       <Card>
