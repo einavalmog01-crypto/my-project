@@ -263,12 +263,25 @@ export default function DocumentationPage() {
     <div className="flex h-[calc(100vh-8rem)]">
       {/* Sidebar */}
       <div className="w-80 border-r flex flex-col">
-        <div className="p-4 border-b flex items-center justify-between">
+<div className="p-4 border-b flex items-center justify-between">
           <h2 className="font-semibold">Documentation</h2>
           <Button size="sm" onClick={openAddBranchDialog}>
             <Plus className="h-4 w-4 mr-1" />
             Branch
           </Button>
+        </div>
+
+        {/* Search Card */}
+        <div className="p-2 border-b">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-8 h-9"
+            />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
