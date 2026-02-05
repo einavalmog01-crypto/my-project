@@ -78,7 +78,7 @@ const initialTests: TestCase[] = [
     selected: false, 
     comment: "" 
   },
-  { 
+{ 
     id: "get-order", 
     name: "GetOrder", 
     suite: "Order", 
@@ -88,7 +88,16 @@ const initialTests: TestCase[] = [
     comment: "" 
   },
   { 
-    id: "dsl-submit-order", 
+    id: "get-documents", 
+    name: "GetDocuments", 
+    suite: "Order", 
+    description: "SubmitOrder (GenerateContract + Fulfillment) + SetOrderStatus + OMSendDocumentCallback + GetDocuments flow",
+    status: "idle", 
+    selected: false, 
+    comment: "" 
+  },
+  { 
+    id: "dsl-submit-order",
     name: "DSL_ILS Submit Order", 
     suite: "DSL", 
     description: "SubmitOrder + SetFNOrderStatus (CUSTOMER_CREATED + ORDER_COMPLETED) flow",
@@ -454,7 +463,7 @@ async function runSelected() {
         "IMPORTED_IN_VORAS": test?.customTemplates?.["IMPORTED_IN_VORAS"] || defaultSetOrderStatus,
         "VORAS_FINAL_SUCCESS_HANDOUT": test?.customTemplates?.["VORAS_FINAL_SUCCESS_HANDOUT"] || defaultSetOrderStatus,
       })
-    } else if (testId === "get-order") {
+} else if (testId === "get-order") {
       setEditingTemplates({
         "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
         "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
@@ -466,6 +475,33 @@ async function runSelected() {
     <vfde:GetOrder>
       <OGWOrderId>${ogwOrderId}</OGWOrderId>
     </vfde:GetOrder>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+      })
+    } else if (testId === "get-documents") {
+      setEditingTemplates({
+        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "SetOrderStatus_EAI": test?.customTemplates?.["SetOrderStatus_EAI"] || defaultSetOrderStatus,
+        "OMSendDocumentCallback": test?.customTemplates?.["OMSendDocumentCallback"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:epsm="http://epsm.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <epsm:sendDocumentResponse>
+      <epsm:externeId>${ogwOrderId}||P|Mobile_Postpaid</epsm:externeId>
+      <epsm:auftragId>{{AUFTRAG_ID}}</epsm:auftragId>
+    </epsm:sendDocumentResponse>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "GetDocuments": test?.customTemplates?.["GetDocuments"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vfde:GetDocuments>
+      <OriginatingID>${orderId}</OriginatingID>
+      <DocumentID>{{AUFTRAG_ID}}</DocumentID>
+      <LineOfBusiness>{{LINE_OF_BUSINESS}}</LineOfBusiness>
+    </vfde:GetDocuments>
   </soapenv:Body>
 </soapenv:Envelope>`,
       })
