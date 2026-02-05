@@ -233,41 +233,35 @@ export default function ProjectKTPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <FileText className="h-5 w-5 text-blue-400" />
+              <div className="p-1.5 rounded-md bg-blue-500/20">
+                <FileText className="h-4 w-4 text-blue-400" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{documents.length}</p>
-                <p className="text-sm text-muted-foreground">Documents</p>
-              </div>
+              <span className="text-xl font-bold">{documents.length}</span>
+              <span className="text-sm text-muted-foreground">Documents</span>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Video className="h-5 w-5 text-purple-400" />
+              <div className="p-1.5 rounded-md bg-purple-500/20">
+                <Video className="h-4 w-4 text-purple-400" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{videos.length}</p>
-                <p className="text-sm text-muted-foreground">Videos</p>
-              </div>
+              <span className="text-xl font-bold">{videos.length}</span>
+              <span className="text-sm text-muted-foreground">Videos</span>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/20">
-                <LinkIcon className="h-5 w-5 text-green-400" />
+              <div className="p-1.5 rounded-md bg-green-500/20">
+                <LinkIcon className="h-4 w-4 text-green-400" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{links.length}</p>
-                <p className="text-sm text-muted-foreground">Links</p>
-              </div>
+              <span className="text-xl font-bold">{links.length}</span>
+              <span className="text-sm text-muted-foreground">Links</span>
             </div>
           </CardContent>
         </Card>
