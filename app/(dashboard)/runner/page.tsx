@@ -91,7 +91,7 @@ const initialTests: TestCase[] = [
     id: "get-documents", 
     name: "GetDocuments", 
     suite: "Order", 
-    description: "SubmitOrder (GenerateContract + Fulfillment) + SetOrderStatus + OMSendDocumentCallback + GetDocuments flow",
+    description: "SubmitOrder (GenerateContract + Fulfillment) + DB Checks (SOS, AUFTRAG_ID, ACMS) + OMSendDocumentCallback + GetDocuments flow",
     status: "idle", 
     selected: false, 
     comment: "" 
@@ -482,23 +482,47 @@ async function runSelected() {
       setEditingTemplates({
         "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
         "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "SetOrderStatus_EAI": test?.customTemplates?.["SetOrderStatus_EAI"] || defaultSetOrderStatus,
+        "DB Check: SOS Completion": test?.customTemplates?.["DB Check: SOS Completion"] || `-- Wait for SOS MESSAGE_STATUS = C
+SELECT 
+    M.MESSAGE_STATUS,
+    EXTRACTVALUE(XMLTYPE(M.MESSAGE_DATA), '//*[local-name()="OGWOrderLineId"]') AS OrderLineId,
+    M.MESSAGE_DATA
+FROM set_order_status_req_handler M
+WHERE TRIM(M.CDM_TXID) = TRIM('{{OGW_ORDER_ID}}')
+ORDER BY TO_NUMBER(M.SUBSCRIBE_MESSAGE_ID);
+
+-- Expected: All rows should have MESSAGE_STATUS = 'C'
+-- Validates ErrorCodes are OGWERR-0000 or 60507`,
+        "DB Check: AUFTRAG_ID": test?.customTemplates?.["DB Check: AUFTRAG_ID"] || `-- Retrieve AUFTRAG_ID from OGW_SEND_DOCUMENT_TRANSACTIONS
+SELECT AUFTRAG_ID 
+FROM OGW_SEND_DOCUMENT_TRANSACTIONS 
+WHERE OGW_ORDER_ID = '{{OGW_ORDER_ID}}'
+ORDER BY AUFTRAG_ID DESC;
+
+-- Takes the first (most recent) row
+-- Must be a single numeric ID`,
         "OMSendDocumentCallback": test?.customTemplates?.["OMSendDocumentCallback"] || `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:epsm="http://epsm.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
     <epsm:sendDocumentResponse>
-      <epsm:externeId>${ogwOrderId}||P|Mobile_Postpaid</epsm:externeId>
+      <epsm:externeId>{{OGW_ORDER_ID}}||P|Mobile_Postpaid</epsm:externeId>
       <epsm:auftragId>{{AUFTRAG_ID}}</epsm:auftragId>
     </epsm:sendDocumentResponse>
   </soapenv:Body>
 </soapenv:Envelope>`,
+        "DB Check: ACMS_Content": test?.customTemplates?.["DB Check: ACMS_Content"] || `-- Wait for ACMS_Content record
+SELECT COUNT(1) 
+FROM ACMS_CONTENT 
+WHERE STR1 = '{{OGW_ORDER_ID}}';
+
+-- Expected: COUNT > 0`,
         "GetDocuments": test?.customTemplates?.["GetDocuments"] || `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
     <vfde:GetDocuments>
-      <OriginatingID>${orderId}</OriginatingID>
+      <OriginatingID>{{ORDER_ID}}</OriginatingID>
       <DocumentID>{{AUFTRAG_ID}}</DocumentID>
       <LineOfBusiness>{{LINE_OF_BUSINESS}}</LineOfBusiness>
     </vfde:GetDocuments>
