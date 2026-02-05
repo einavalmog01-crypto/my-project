@@ -45,7 +45,8 @@ const BASIC_SANITY_TESTS = [
   "cable-submit-order",
   "mobile-telesales-submit-order",
   "mobile-retail-submit-order",
-  "dsl-submit-order",
+  "dsl-ils-submit-order",
+  "dsl-new-submit-order",
   "search-customer",
   "legacy-search",
 ]
@@ -55,7 +56,7 @@ const initialTests: TestCase[] = [
     id: "cable-submit-order", 
     name: "Cable Submit Order", 
     suite: "Cable", 
-    description: "SubmitOrder (GenerateContract + Fulfillment) + SetOrderStatus flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. SetOrderStatus -> 4. DB Check SOS",
     status: "idle", 
     selected: false, 
     comment: "" 
@@ -64,7 +65,7 @@ const initialTests: TestCase[] = [
     id: "mobile-telesales-submit-order", 
     name: "Mobile Telesales Submit Order", 
     suite: "Mobile", 
-    description: "SubmitOrder + FRIDA processing + SetOrderStatus_EAI + OMSendDocumentCallback + HWFulfilmentReady flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS (C/D) -> 3. FRIDA Processing -> 4. SetOrderStatus_EAI -> 5. DB Check SOS -> 6. OMSendDocumentCallback -> 7. DB Check SOS -> 8. HWFulfilmentReady -> 9. DB Check SOS",
     status: "idle", 
     selected: false, 
     comment: "" 
@@ -73,16 +74,16 @@ const initialTests: TestCase[] = [
     id: "mobile-retail-submit-order", 
     name: "Mobile Retail Submit Order", 
     suite: "Mobile", 
-    description: "SubmitOrder + SetOrderStatus_EAI + IMPORTED_IN_VORAS + VORAS_FINAL_SUCCESS_HANDOUT flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. SetOrderStatus_EAI (each OrderLineID) -> 4. DB Check SOS -> 5. IMPORTED_IN_VORAS (each OrderLineID) -> 6. DB Check SOS -> 7. VORAS_FINAL_SUCCESS_HANDOUT (each OrderLineID) -> 8. DB Check SOS",
     status: "idle", 
     selected: false, 
     comment: "" 
   },
-{ 
+  { 
     id: "get-order", 
     name: "GetOrder", 
     suite: "Order", 
-    description: "SubmitOrder + SetOrderStatus_EAI + GetOrder flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. SetOrderStatus_EAI (each OrderLineID) -> 4. DB Check SOS -> 5. GetOrder",
     status: "idle", 
     selected: false, 
     comment: "" 
@@ -91,16 +92,25 @@ const initialTests: TestCase[] = [
     id: "get-documents", 
     name: "GetDocuments", 
     suite: "Order", 
-    description: "SubmitOrder (GenerateContract + Fulfillment) + DB Checks (SOS, AUFTRAG_ID, ACMS) + OMSendDocumentCallback + GetDocuments flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. DB Check AUFTRAG_ID -> 4. OMSendDocumentCallback -> 5. DB Check ACMS -> 6. GetDocuments",
     status: "idle", 
     selected: false, 
     comment: "" 
   },
   { 
-    id: "dsl-submit-order",
+    id: "dsl-ils-submit-order",
     name: "DSL_ILS Submit Order", 
     suite: "DSL", 
-    description: "SubmitOrder + SetFNOrderStatus (CUSTOMER_CREATED + ORDER_COMPLETED) flow",
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. DB Check BAR_CODE -> 4. SetFNOrderStatus CUSTOMER_CREATED -> 5. DB Check SOS -> 6. SetFNOrderStatus ORDER_COMPLETED -> 7. DB Check SOS",
+    status: "idle", 
+    selected: false, 
+    comment: "" 
+  },
+  { 
+    id: "dsl-new-submit-order",
+    name: "DSL_NEW Submit Order", 
+    suite: "DSL", 
+    description: "1. SubmitOrder (GC + Fulfillment) -> 2. DB Check SOS -> 3. DB Check BAR_CODE -> 4. SetFNOrderStatus CONFIRMATION_OK -> 5. DB Check SOS -> 6. SetFNOrderStatus CUSTOMER_CREATED -> 7. DB Check SOS -> 8. SetFNOrderStatus ORDER_COMPLETED -> 9. DB Check SOS",
     status: "idle", 
     selected: false, 
     comment: "" 
@@ -431,49 +441,100 @@ async function runSelected() {
   </soapenv:Body>
 </soapenv:Envelope>`
 
-    if (testId === "cable-submit-order") {
+if (testId === "cable-submit-order") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "SetOrderStatus": test?.customTemplates?.["SetOrderStatus"] || defaultSetOrderStatus,
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS": test?.customTemplates?.["2. DB Check: SOS"] || `-- Wait for SOS MESSAGE_STATUS = C
+-- INPUT: OGW_ORDER_ID from SubmitOrder response
+SELECT M.MESSAGE_STATUS, EXTRACTVALUE(XMLTYPE(M.MESSAGE_DATA), '//*[local-name()="OGWOrderLineId"]') AS OrderLineId
+FROM set_order_status_req_handler M WHERE TRIM(M.CDM_TXID) = TRIM('{{OGW_ORDER_ID}}')
+ORDER BY TO_NUMBER(M.SUBSCRIBE_MESSAGE_ID);`,
+        "3. SetOrderStatus": test?.customTemplates?.["3. SetOrderStatus"] || defaultSetOrderStatus,
+        "4. DB Check: SOS (Final)": test?.customTemplates?.["4. DB Check: SOS (Final)"] || `-- Validate final SOS completion after SetOrderStatus`,
       })
-    } else if (testId === "mobile-telesales-submit-order") {
+} else if (testId === "mobile-telesales-submit-order") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "FRIDA Evidence JSON": test?.customTemplates?.["FRIDA Evidence JSON"] || DEFAULT_FRIDA_EVIDENCE,
-        "SetOrderStatus_EAI": test?.customTemplates?.["SetOrderStatus_EAI"] || defaultSetOrderStatus,
-        "OMSendDocumentCallback": test?.customTemplates?.["OMSendDocumentCallback"] || `<?xml version="1.0" encoding="UTF-8"?>
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS (C/D)": test?.customTemplates?.["2. DB Check: SOS (C/D)"] || `-- Wait for SOS MESSAGE_STATUS = C or D
+-- OUTPUT: ORDER_LINE_IDS array for subsequent steps`,
+        "3. FRIDA Processing": test?.customTemplates?.["3. FRIDA Processing"] || `-- For EACH OrderLineID:
+-- a) Create FRIDA Evidence JSON file
+-- b) Wait for files to be consumed
+-- c) Validate OGW_FRIDA_SUBSCRIBER_INFO DB record exists
+
+${DEFAULT_FRIDA_EVIDENCE}`,
+        "4. SetOrderStatus_EAI (each OrderLineID)": test?.customTemplates?.["4. SetOrderStatus_EAI (each OrderLineID)"] || defaultSetOrderStatus,
+        "5. DB Check: SOS": test?.customTemplates?.["5. DB Check: SOS"] || `-- Wait for SOS completion after SetOrderStatus_EAI`,
+        "6. OMSendDocumentCallback (each OrderLineID)": test?.customTemplates?.["6. OMSendDocumentCallback (each OrderLineID)"] || `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
     <vfde:sendDocumentResponse>
       <auftragId>{{AUFTRAG_ID}}</auftragId>
-      <externeId>${ogwOrderId}|${orderLineId}|P</externeId>
+      <externeId>{{OGW_ORDER_ID}}|{{ORDER_LINE_ID}}|P</externeId>
     </vfde:sendDocumentResponse>
   </soapenv:Body>
 </soapenv:Envelope>`,
-        "HWFulfilmentReady": test?.customTemplates?.["HWFulfilmentReady"] || defaultSetOrderStatus,
+        "7. DB Check: SOS": test?.customTemplates?.["7. DB Check: SOS"] || `-- Wait for SOS completion after OMSendDocumentCallback`,
+        "8. HWFulfilmentReady (each OrderLineID)": test?.customTemplates?.["8. HWFulfilmentReady (each OrderLineID)"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vfde:SetOrderStatus>
+      <OGWSubOrderId>{{OGW_ORDER_ID}}</OGWSubOrderId>
+      <OGWOrderLineId>{{ORDER_LINE_ID}}</OGWOrderLineId>
+    </vfde:SetOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "9. DB Check: SOS (Final)": test?.customTemplates?.["9. DB Check: SOS (Final)"] || `-- Final SOS validation`,
       })
-    } else if (testId === "mobile-retail-submit-order") {
+} else if (testId === "mobile-retail-submit-order") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "SetOrderStatus_EAI": test?.customTemplates?.["SetOrderStatus_EAI"] || defaultSetOrderStatus,
-        "IMPORTED_IN_VORAS": test?.customTemplates?.["IMPORTED_IN_VORAS"] || defaultSetOrderStatus,
-        "VORAS_FINAL_SUCCESS_HANDOUT": test?.customTemplates?.["VORAS_FINAL_SUCCESS_HANDOUT"] || defaultSetOrderStatus,
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS": test?.customTemplates?.["2. DB Check: SOS"] || `-- Wait for SOS MESSAGE_STATUS = C
+-- OUTPUT: ORDER_LINE_IDS array for subsequent steps`,
+        "3. SetOrderStatus_EAI (each OrderLineID)": test?.customTemplates?.["3. SetOrderStatus_EAI (each OrderLineID)"] || defaultSetOrderStatus,
+        "4. DB Check: SOS": test?.customTemplates?.["4. DB Check: SOS"] || `-- Wait for SOS after SetOrderStatus_EAI`,
+        "5. IMPORTED_IN_VORAS (each OrderLineID)": test?.customTemplates?.["5. IMPORTED_IN_VORAS (each OrderLineID)"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vfde:SetOrderStatus>
+      <OGWSubOrderId>{{OGW_ORDER_ID}}</OGWSubOrderId>
+      <OGWOrderLineId>{{ORDER_LINE_ID}}</OGWOrderLineId>
+    </vfde:SetOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "6. DB Check: SOS": test?.customTemplates?.["6. DB Check: SOS"] || `-- Wait for SOS after IMPORTED_IN_VORAS`,
+        "7. VORAS_FINAL_SUCCESS_HANDOUT (each OrderLineID)": test?.customTemplates?.["7. VORAS_FINAL_SUCCESS_HANDOUT (each OrderLineID)"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vfde:SetOrderStatus>
+      <OGWSubOrderId>{{OGW_ORDER_ID}}</OGWSubOrderId>
+      <OGWOrderLineId>{{ORDER_LINE_ID}}</OGWOrderLineId>
+    </vfde:SetOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "8. DB Check: SOS (Final)": test?.customTemplates?.["8. DB Check: SOS (Final)"] || `-- Final SOS validation`,
       })
 } else if (testId === "get-order") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "SetOrderStatus_EAI": test?.customTemplates?.["SetOrderStatus_EAI"] || defaultSetOrderStatus,
-        "GetOrder": test?.customTemplates?.["GetOrder"] || `<?xml version="1.0" encoding="UTF-8"?>
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS": test?.customTemplates?.["2. DB Check: SOS"] || `-- Wait for SOS MESSAGE_STATUS = C
+-- OUTPUT: ORDER_LINE_IDS array`,
+        "3. SetOrderStatus_EAI (each OrderLineID)": test?.customTemplates?.["3. SetOrderStatus_EAI (each OrderLineID)"] || defaultSetOrderStatus,
+        "4. DB Check: SOS": test?.customTemplates?.["4. DB Check: SOS"] || `-- Wait for SOS after SetOrderStatus_EAI`,
+        "5. GetOrder": test?.customTemplates?.["5. GetOrder"] || `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:vfde="http://vfde.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
     <vfde:GetOrder>
-      <OGWOrderId>${ogwOrderId}</OGWOrderId>
+      <OGWOrderId>{{OGW_ORDER_ID}}</OGWOrderId>
     </vfde:GetOrder>
   </soapenv:Body>
 </soapenv:Envelope>`,
@@ -548,21 +609,83 @@ WHERE STR1 = '{{OGW_ORDER_ID}}';
   </soapenv:Body>
 </soapenv:Envelope>`,
       })
-    } else if (testId === "dsl-submit-order") {
+} else if (testId === "dsl-ils-submit-order") {
       setEditingTemplates({
-        "SubmitOrder (GenerateContract)": test?.customTemplates?.["SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
-        "SubmitOrder (Fulfillment)": test?.customTemplates?.["SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
-        "SetFNOrderStatus": test?.customTemplates?.["SetFNOrderStatus"] || `<?xml version="1.0" encoding="UTF-8"?>
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS": test?.customTemplates?.["2. DB Check: SOS"] || `-- Wait for SOS MESSAGE_STATUS = C`,
+        "3. DB Check: BAR_CODE": test?.customTemplates?.["3. DB Check: BAR_CODE"] || `-- Retrieve BAR_CODE from OGW_BARCODE_MAPPING
+SELECT TRIM(BAR_CODE) FROM OGW_BARCODE_MAPPING WHERE OGW_ORDER_ID = '{{OGW_ORDER_ID}}';
+-- OUTPUT: BAR_CODE for SetFNOrderStatus calls`,
+        "4. SetFNOrderStatus CUSTOMER_CREATED": test?.customTemplates?.["4. SetFNOrderStatus CUSTOMER_CREATED"] || `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ogw="http://ogw.amdocs.com/">
   <soapenv:Header/>
   <soapenv:Body>
     <ogw:SetFNOrderStatus>
       <ogw:orderId>{{BAR_CODE}}</ogw:orderId>
       <ogw:barcode>{{BAR_CODE}}</ogw:barcode>
-      <ogw:status>{{STATUS}}</ogw:status>
+      <ogw:status>CUSTOMER_CREATED</ogw:status>
     </ogw:SetFNOrderStatus>
   </soapenv:Body>
 </soapenv:Envelope>`,
+        "5. DB Check: SOS": test?.customTemplates?.["5. DB Check: SOS"] || `-- Wait for SOS after CUSTOMER_CREATED`,
+        "6. SetFNOrderStatus ORDER_COMPLETED": test?.customTemplates?.["6. SetFNOrderStatus ORDER_COMPLETED"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ogw="http://ogw.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ogw:SetFNOrderStatus>
+      <ogw:orderId>{{BAR_CODE}}</ogw:orderId>
+      <ogw:barcode>{{BAR_CODE}}</ogw:barcode>
+      <ogw:status>ORDER_COMPLETED</ogw:status>
+    </ogw:SetFNOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "7. DB Check: SOS (Final)": test?.customTemplates?.["7. DB Check: SOS (Final)"] || `-- Final SOS validation`,
+      })
+    } else if (testId === "dsl-new-submit-order") {
+      setEditingTemplates({
+        "1. SubmitOrder (GenerateContract)": test?.customTemplates?.["1. SubmitOrder (GenerateContract)"] || defaultSubmitOrderGC,
+        "1. SubmitOrder (Fulfillment)": test?.customTemplates?.["1. SubmitOrder (Fulfillment)"] || defaultSubmitOrderFulfillment,
+        "2. DB Check: SOS": test?.customTemplates?.["2. DB Check: SOS"] || `-- Wait for SOS MESSAGE_STATUS = C`,
+        "3. DB Check: BAR_CODE": test?.customTemplates?.["3. DB Check: BAR_CODE"] || `-- Retrieve BAR_CODE from OGW_BARCODE_MAPPING
+SELECT TRIM(BAR_CODE) FROM OGW_BARCODE_MAPPING WHERE OGW_ORDER_ID = '{{OGW_ORDER_ID}}';
+-- OUTPUT: BAR_CODE for SetFNOrderStatus calls`,
+        "4. SetFNOrderStatus CONFIRMATION_OK": test?.customTemplates?.["4. SetFNOrderStatus CONFIRMATION_OK"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ogw="http://ogw.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ogw:SetFNOrderStatus>
+      <ogw:orderId>{{BAR_CODE}}</ogw:orderId>
+      <ogw:barcode>{{BAR_CODE}}</ogw:barcode>
+      <ogw:status>CONFIRMATION_OK</ogw:status>
+    </ogw:SetFNOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "5. DB Check: SOS": test?.customTemplates?.["5. DB Check: SOS"] || `-- Wait for SOS after CONFIRMATION_OK`,
+        "6. SetFNOrderStatus CUSTOMER_CREATED": test?.customTemplates?.["6. SetFNOrderStatus CUSTOMER_CREATED"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ogw="http://ogw.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ogw:SetFNOrderStatus>
+      <ogw:orderId>{{BAR_CODE}}</ogw:orderId>
+      <ogw:barcode>{{BAR_CODE}}</ogw:barcode>
+      <ogw:status>CUSTOMER_CREATED</ogw:status>
+    </ogw:SetFNOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "7. DB Check: SOS": test?.customTemplates?.["7. DB Check: SOS"] || `-- Wait for SOS after CUSTOMER_CREATED`,
+        "8. SetFNOrderStatus ORDER_COMPLETED": test?.customTemplates?.["8. SetFNOrderStatus ORDER_COMPLETED"] || `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ogw="http://ogw.amdocs.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ogw:SetFNOrderStatus>
+      <ogw:orderId>{{BAR_CODE}}</ogw:orderId>
+      <ogw:barcode>{{BAR_CODE}}</ogw:barcode>
+      <ogw:status>ORDER_COMPLETED</ogw:status>
+    </ogw:SetFNOrderStatus>
+  </soapenv:Body>
+</soapenv:Envelope>`,
+        "9. DB Check: SOS (Final)": test?.customTemplates?.["9. DB Check: SOS (Final)"] || `-- Final SOS validation`,
       })
     } else if (testId === "search-customer") {
       setEditingTemplates({
@@ -647,7 +770,7 @@ WHERE STR1 = '{{OGW_ORDER_ID}}';
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {(t.id.includes("cable") || t.id.includes("mobile") || t.id === "get-order" || t.id === "get-documents" || t.id === "dsl-submit-order" || t.id === "search-customer" || t.id === "legacy-search") && (
+                      {(t.id.includes("cable") || t.id.includes("mobile") || t.id.includes("dsl") || t.id === "get-order" || t.id === "get-documents" || t.id === "search-customer" || t.id === "legacy-search") && (
                         <Button
                           variant="ghost"
                           size="icon"
