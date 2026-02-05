@@ -277,13 +277,13 @@ const filteredResources = resources.filter(r => {
 
         {/* Quick Add Buttons */}
         <Card className="flex-1">
-          <CardContent className="p-3 flex items-center gap-4">
+          <CardContent className="p-3 flex items-center justify-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">Add Resource:</span>
             <div className="flex gap-2">
               <Button 
                 size="sm"
                 onClick={() => openAddDialog("document")}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-28"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Document
@@ -291,7 +291,7 @@ const filteredResources = resources.filter(r => {
               <Button 
                 size="sm"
                 onClick={() => openAddDialog("video")}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-purple-600 hover:bg-purple-700 w-28"
               >
                 <Video className="mr-2 h-4 w-4" />
                 Video
@@ -299,7 +299,7 @@ const filteredResources = resources.filter(r => {
               <Button 
                 size="sm"
                 onClick={() => openAddDialog("link")}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-28"
               >
                 <LinkIcon className="mr-2 h-4 w-4" />
                 Link
