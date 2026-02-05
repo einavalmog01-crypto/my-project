@@ -604,7 +604,7 @@ async function runSelected() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {(t.id.includes("cable") || t.id.includes("mobile") || t.id === "get-order" || t.id === "dsl-submit-order" || t.id === "search-customer" || t.id === "legacy-search") && (
+                      {(t.id.includes("cable") || t.id.includes("mobile") || t.id === "get-order" || t.id === "get-documents" || t.id === "dsl-submit-order" || t.id === "search-customer" || t.id === "legacy-search") && (
                         <Button
                           variant="ghost"
                           size="icon"
