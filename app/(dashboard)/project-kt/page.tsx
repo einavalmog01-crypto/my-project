@@ -48,6 +48,7 @@ import {
   Download,
   BookOpen,
   FolderOpen,
+  Search,
 } from "lucide-react"
 
 const STORAGE_KEY = "projectKTResources"
@@ -95,16 +96,21 @@ export default function ProjectKTPage() {
   const [fileName, setFileName] = useState("")
   const [fileData, setFileData] = useState("")
 
-  // Filter state
+// Filter state
   const [filterType, setFilterType] = useState<ResourceType | "all">("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     setResources(loadResources())
   }, [])
 
-  const filteredResources = filterType === "all" 
-    ? resources 
-    : resources.filter(r => r.type === filterType)
+const filteredResources = resources.filter(r => {
+    const matchesType = filterType === "all" || r.type === filterType
+    const matchesSearch = searchQuery === "" || 
+      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.description.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesType && matchesSearch
+  })
 
   const documents = resources.filter(r => r.type === "document")
   const videos = resources.filter(r => r.type === "video")
@@ -296,6 +302,21 @@ export default function ProjectKTPage() {
               <LinkIcon className="mr-2 h-4 w-4" />
               Add Link
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+{/* Search Card */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search documents, videos, and links..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
         </CardContent>
       </Card>
