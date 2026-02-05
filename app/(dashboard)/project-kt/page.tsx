@@ -236,78 +236,49 @@ const filteredResources = resources.filter(r => {
         </div>
       </div>
 
-      {/* Stats Cards and Quick Add - Side by Side */}
-      <div className="flex gap-4">
-        {/* Stats Cards */}
-        <div className="flex-1 flex gap-3">
-          <Card className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-md bg-blue-500/20">
-                  <FileText className="h-5 w-5 text-blue-400" />
+      {/* Add Resource */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Add Resource</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex gap-3">
+            <Card 
+              className="flex-1 cursor-pointer hover:bg-blue-500/10 border-blue-500/20 transition-colors"
+              onClick={() => openAddDialog("document")}
+            >
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-blue-500/20">
+                  <FileText className="h-4 w-4 text-blue-400" />
                 </div>
-                <span className="text-2xl font-bold">{documents.length}</span>
-                <span className="text-sm text-muted-foreground">Documents</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-md bg-purple-500/20">
-                  <Video className="h-5 w-5 text-purple-400" />
+                <span className="text-sm font-medium">Document</span>
+              </CardContent>
+            </Card>
+            <Card 
+              className="flex-1 cursor-pointer hover:bg-purple-500/10 border-purple-500/20 transition-colors"
+              onClick={() => openAddDialog("video")}
+            >
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-purple-500/20">
+                  <Video className="h-4 w-4 text-purple-400" />
                 </div>
-                <span className="text-2xl font-bold">{videos.length}</span>
-                <span className="text-sm text-muted-foreground">Videos</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-md bg-green-500/20">
-                  <LinkIcon className="h-5 w-5 text-green-400" />
+                <span className="text-sm font-medium">Video</span>
+              </CardContent>
+            </Card>
+            <Card 
+              className="flex-1 cursor-pointer hover:bg-green-500/10 border-green-500/20 transition-colors"
+              onClick={() => openAddDialog("link")}
+            >
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-green-500/20">
+                  <LinkIcon className="h-4 w-4 text-green-400" />
                 </div>
-                <span className="text-2xl font-bold">{links.length}</span>
-                <span className="text-sm text-muted-foreground">Links</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Add Buttons */}
-        <Card className="shrink-0">
-          <CardContent className="p-4 flex items-center gap-4">
-            <span className="text-sm font-medium text-muted-foreground">Add:</span>
-            <div className="flex gap-2">
-              <Button 
-                size="sm"
-                onClick={() => openAddDialog("document")}
-                className="bg-blue-600 hover:bg-blue-700 w-24"
-              >
-                <FileText className="mr-1.5 h-4 w-4" />
-                Doc
-              </Button>
-              <Button 
-                size="sm"
-                onClick={() => openAddDialog("video")}
-                className="bg-purple-600 hover:bg-purple-700 w-24"
-              >
-                <Video className="mr-1.5 h-4 w-4" />
-                Video
-              </Button>
-              <Button 
-                size="sm"
-                onClick={() => openAddDialog("link")}
-                className="bg-green-600 hover:bg-green-700 w-24"
-              >
-                <LinkIcon className="mr-1.5 h-4 w-4" />
-                Link
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <span className="text-sm font-medium">Link</span>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
 
 {/* Search Card */}
       <Card>
