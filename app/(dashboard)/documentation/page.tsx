@@ -54,6 +54,7 @@ import {
   Download,
   ExternalLink,
   Upload,
+  Search,
 } from "lucide-react"
 
 const CATEGORIES: { id: DocCategory; name: string; icon: typeof BookOpen }[] = [
@@ -103,15 +104,29 @@ export default function DocumentationPage() {
   const [docFileName, setDocFileName] = useState("")
   const [docFileData, setDocFileData] = useState("")
 
-  // Delete states
+// Delete states
   const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null)
   const [deletingDoc, setDeletingDoc] = useState<Document | null>(null)
 
-  // Get current branch and documents
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("")
+
+// Get current branch and documents
   const selectedBranch = branches.find(b => b.id === selectedBranchId)
   const currentDocs = selectedBranchId && selectedCategory && selectedSystem
     ? getDocuments(selectedBranchId, selectedCategory, selectedSystem)
     : []
+
+  // Filter documents by search query
+  const filteredDocs = currentDocs.filter(doc => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      doc.title.toLowerCase().includes(query) ||
+      (doc.description && doc.description.toLowerCase().includes(query)) ||
+      (doc.fileName && doc.fileName.toLowerCase().includes(query))
+    )
+  })
 
   // Toggle functions
   const toggleBranch = (branchId: string) => {
@@ -451,33 +466,63 @@ export default function DocumentationPage() {
                   {getCategoryName(selectedCategory)} - {getSystemName(selectedSystem)}
                 </h2>
               </div>
-              <Button onClick={openAddDocDialog}>
+<Button onClick={openAddDocDialog}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Document
               </Button>
             </div>
 
-            {/* Documents List */}
-            {currentDocs.length === 0 ? (
+            {/* Search Card */}
+            <Card>
+              <CardContent className="p-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search documents by title, description, or filename..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+{/* Documents List */}
+            {filteredDocs.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Documents Yet</h3>
-                  <p className="text-muted-foreground mb-1">
-                    No delivery was done for {getSystemName(selectedSystem)} {getCategoryName(selectedCategory)} in this branch.
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Add documents to track deliverables for {selectedBranch?.name}
-                  </p>
-                  <Button onClick={openAddDocDialog}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Document
-                  </Button>
+                  {searchQuery ? (
+                    <>
+                      <Search className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No Results Found</h3>
+                      <p className="text-muted-foreground mb-4">
+                        No documents match &quot;{searchQuery}&quot;
+                      </p>
+                      <Button variant="outline" onClick={() => setSearchQuery("")}>
+                        Clear Search
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No Documents Yet</h3>
+                      <p className="text-muted-foreground mb-1">
+                        No delivery was done for {getSystemName(selectedSystem)} {getCategoryName(selectedCategory)} in this branch.
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add documents to track deliverables for {selectedBranch?.name}
+                      </p>
+                      <Button onClick={openAddDocDialog}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Document
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {currentDocs.sort((a, b) => b.createdAt - a.createdAt).map(doc => (
+                {filteredDocs.sort((a, b) => b.createdAt - a.createdAt).map(doc => (
                   <Card key={doc.id} className="hover:border-primary/50 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
